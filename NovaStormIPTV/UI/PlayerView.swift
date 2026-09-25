@@ -49,9 +49,10 @@ final class PlayerModel: ObservableObject {
             let pos = History.position(kind: r.kind, id: r.id)
             if pos > 15_000 { p.seek(to: CMTime(value: pos, timescale: 1000)) }
             // Save progress every 5 s so Continue Watching is right even if the app is killed.
+            // AVFoundation calls this from a non-isolated context; hop back onto the main actor.
             timeObserver = p.addPeriodicTimeObserver(
                 forInterval: CMTime(seconds: 5, preferredTimescale: 1), queue: .main) { [weak self] _ in
-                self?.save()
+                Task { @MainActor in self?.save() }
             }
         }
         player = p
