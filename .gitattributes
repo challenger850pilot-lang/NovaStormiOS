@@ -1,0 +1,3 @@
+# Keep LF in the repo and on checkout everywhere (the macOS runner runs these scripts).
+* text=auto eol=lf
+*.png binary
