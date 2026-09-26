@@ -33,7 +33,11 @@ struct MoviesView: View {
         error = nil
         do {
             try await catalog.loadMovieCategories()
-            countries = catalog.movieCategories.groupByCountry()
+            // Adult categories (e.g. "FOR ADULTS") live in the PIN-gated Adult tab.
+            countries = catalog.movieCategories.groupByCountry().compactMap { c in
+                let cats = c.categories.filter { !isAdultLabel($0.category.name) }
+                return cats.isEmpty ? nil : VodCountry(name: c.name, flagCode: c.flagCode, categories: cats, emoji: c.emoji)
+            }
         } catch {
             self.error = "Couldn't load movies: \(error.localizedDescription)"
         }

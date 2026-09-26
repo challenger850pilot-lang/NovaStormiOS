@@ -30,6 +30,13 @@ enum Prefs {
     }
 
     static func clear() { UserDefaults.standard.removeObject(forKey: key) }
+
+    // Adult section PIN (4 digits).
+    private static let pinKey = "novastorm_adult_pin"
+    static func hasAdultPin() -> Bool { !(UserDefaults.standard.string(forKey: pinKey) ?? "").isEmpty }
+    static func adultPin() -> String { UserDefaults.standard.string(forKey: pinKey) ?? "" }
+    static func setAdultPin(_ pin: String) { UserDefaults.standard.set(pin, forKey: pinKey) }
+    static func clearAdultPin() { UserDefaults.standard.removeObject(forKey: pinKey) }
 }
 
 /// Picks the URL the gateway is actually reachable on: LAN at home, tunnel when away.

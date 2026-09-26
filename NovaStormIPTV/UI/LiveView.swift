@@ -74,7 +74,8 @@ struct LiveCategoryView: View {
     private func load() async {
         error = nil
         do {
-            sections = try await catalog.sections(category.id)
+            // Adult sections live in the PIN-gated Adult tab, not here.
+            sections = try await catalog.sections(category.id).filter { !isAdultLabel($0.label) }
         } catch {
             self.error = "Couldn't load \(category.name): \(error.localizedDescription)"
         }
