@@ -33,6 +33,8 @@ struct RootView: View {
                         .tabItem { Label("Series", systemImage: "play.rectangle.on.rectangle") }
                     SearchView(catalog: catalog)
                         .tabItem { Label("Search", systemImage: "magnifyingglass") }
+                    RadioView()
+                        .tabItem { Label("Radio", systemImage: "dot.radiowaves.left.and.right") }
                     VersionView()
                         .tabItem { Label("Version", systemImage: "info.circle") }
                 }

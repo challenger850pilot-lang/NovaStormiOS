@@ -7,6 +7,7 @@ struct PlayerView: View {
     let title: String
     let url: String
     let resume: WatchItem?          // nil for live
+    var artwork: String? = nil      // radio: station logo shown over the (audio-only) player
 
     @StateObject private var model = PlayerModel()
 
@@ -15,6 +16,28 @@ struct PlayerView: View {
             Color.black.ignoresSafeArea()
             if let p = model.player {
                 VideoPlayer(player: p).ignoresSafeArea()
+            }
+            // Radio is audio-only: show the station logo + name instead of a black screen.
+            if let art = artwork {
+                VStack(spacing: 18) {
+                    Color.white.opacity(0.06)
+                        .frame(width: 220, height: 220)
+                        .overlay {
+                            if let u = URL(string: art), !art.isBlank {
+                                AsyncImage(url: u) { phase in
+                                    if let img = phase.image { img.resizable().scaledToFit().padding(10) }
+                                    else { Image(systemName: "radio").font(.system(size: 80)).foregroundStyle(Theme.muted) }
+                                }
+                            } else {
+                                Image(systemName: "radio").font(.system(size: 80)).foregroundStyle(Theme.muted)
+                            }
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
+                    Text(title).foregroundStyle(.white).font(.title3.bold()).multilineTextAlignment(.center)
+                    Label("Live radio", systemImage: "dot.radiowaves.left.and.right").foregroundStyle(Theme.accent)
+                }
+                .padding()
+                .allowsHitTesting(false)
             }
             if let f = model.failure {
                 Text(f).foregroundStyle(.white).padding().multilineTextAlignment(.center)
