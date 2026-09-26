@@ -244,7 +244,7 @@ final class Downloads: NSObject, ObservableObject {
         let n = (attempts[id] ?? 0) + 1
         attempts[id] = n
         if n > Self.maxStalls {
-            let ns = error as NSError?
+            let ns = error as? NSError
             let outOfSpace = Self.availableBytes() < Self.margin ||
                 (ns?.localizedDescription.localizedCaseInsensitiveContains("space") ?? false)
             fail(id, outOfSpace
@@ -296,7 +296,7 @@ extension Downloads: URLSessionDownloadDelegate {
 
     nonisolated func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         let tid = task.taskIdentifier
-        let resume = (error as NSError?)?.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+        let resume = (error as? NSError)?.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
         Task { @MainActor [weak self] in self?.onComplete(taskId: tid, error: error, resume: resume) }
     }
 }
