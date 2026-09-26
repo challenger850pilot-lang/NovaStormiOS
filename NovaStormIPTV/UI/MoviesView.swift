@@ -57,13 +57,15 @@ struct VodCategoryListView: View {
 
     var body: some View {
         List(country.categories) { entry in
-            NavigationLink(entry.label) {
+            NavigationLink {
                 switch kind {
                 case .movies:
                     MovieGridView(catalog: catalog, category: entry.category, title: entry.label)
                 case .series:
                     SeriesGridView(catalog: catalog, category: entry.category, title: entry.label)
                 }
+            } label: {
+                CategoryRowLabel(name: entry.category.name, label: entry.label)
             }
         }
         .listStyle(.plain)

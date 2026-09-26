@@ -104,6 +104,36 @@ struct ErrorRetry: View {
     }
 }
 
+/// A sub-category row: a brand logo when recognized, else a generic emoji, plus the name.
+struct CategoryRowLabel: View {
+    let name: String
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 12) {
+            let logo = CategoryArt.logoUrl(name)
+            Group {
+                if let l = logo, let u = URL(string: l) {
+                    ZStack {
+                        Color.white
+                        AsyncImage(url: u) { phase in
+                            if let img = phase.image { img.resizable().scaledToFit().padding(4) }
+                            else { Color.clear }
+                        }
+                    }
+                } else {
+                    Text(CategoryArt.emoji(name)).font(.title3)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color.white.opacity(0.08))
+                }
+            }
+            .frame(width: 40, height: 40)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            Text(label).lineLimit(2)
+        }
+    }
+}
+
 /// A country/brand folder row with its flag (or emoji) and category count.
 struct CountryRow: View {
     let country: VodCountry

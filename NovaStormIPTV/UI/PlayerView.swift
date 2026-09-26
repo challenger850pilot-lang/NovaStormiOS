@@ -46,6 +46,27 @@ struct PlayerView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if model.audioOptions.count > 1 {
+                    Menu {
+                        ForEach(model.audioOptions.indices, id: \.self) { i in
+                            Button {
+                                model.selectAudio(index: i)
+                            } label: {
+                                if model.selectedAudio == i {
+                                    Label(model.audioOptions[i].displayName, systemImage: "checkmark")
+                                } else {
+                                    Text(model.audioOptions[i].displayName)
+                                }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "waveform")
+                    }
+                }
+            }
+        }
         .onAppear { model.start(url: url, resume: resume) }
         .onDisappear { model.stop() }
     }
@@ -56,6 +77,9 @@ struct PlayerView: View {
 final class PlayerModel: ObservableObject {
     @Published var player: AVPlayer?
     @Published var failure: String?
+    @Published var audioOptions: [AVMediaSelectionOption] = []
+    @Published var selectedAudio: Int?
+    private var audioGroup: AVMediaSelectionGroup?
     private var resume: WatchItem?
     private var timeObserver: Any?
 
@@ -66,8 +90,10 @@ final class PlayerModel: ObservableObject {
             return
         }
         self.resume = resume
-        let p = AVPlayer(playerItem: AVPlayerItem(url: u))
+        let item = AVPlayerItem(url: u)
+        let p = AVPlayer(playerItem: item)
         p.automaticallyWaitsToMinimizeStalling = true
+        loadAudioOptions(for: item)
         if let r = resume {
             let pos = History.position(kind: r.kind, id: r.id)
             if pos > 15_000 { p.seek(to: CMTime(value: pos, timescale: 1000)) }
@@ -80,6 +106,26 @@ final class PlayerModel: ObservableObject {
         }
         player = p
         p.play()
+    }
+
+    private func loadAudioOptions(for item: AVPlayerItem) {
+        Task { @MainActor in
+            guard let group = try? await item.asset.loadMediaSelectionGroup(for: .audible) else { return }
+            audioGroup = group
+            audioOptions = group.options
+            if let current = item.currentMediaSelection.selectedMediaOption(in: group) {
+                selectedAudio = group.options.firstIndex(where: { $0 === current })
+            } else {
+                selectedAudio = group.options.isEmpty ? nil : 0
+            }
+        }
+    }
+
+    func selectAudio(index: Int) {
+        guard let item = player?.currentItem, let group = audioGroup,
+              audioOptions.indices.contains(index) else { return }
+        item.select(audioOptions[index], in: group)
+        selectedAudio = index
     }
 
     func stop() {
