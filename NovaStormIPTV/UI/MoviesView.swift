@@ -4,6 +4,7 @@ struct MoviesView: View {
     let catalog: Catalog
     @State private var countries: [VodCountry] = []
     @State private var error: String?
+    @ObservedObject private var downloads = Downloads.shared
 
     var body: some View {
         NavigationStack {
@@ -25,6 +26,16 @@ struct MoviesView: View {
             }
             .navigationTitle("Movies")
             .screenBackground()
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        DownloadsView()
+                    } label: {
+                        let n = downloads.items.count
+                        Label("Downloads", systemImage: n > 0 ? "arrow.down.circle.fill" : "arrow.down.circle")
+                    }
+                }
+            }
         }
         .task { await load() }
     }
@@ -119,8 +130,18 @@ struct MovieDetailView: View {
     @State private var info: MovieInfo?
     @State private var sources: [MovieSource] = []
     @State private var chosen: MovieSource?
+    @ObservedObject private var downloads = Downloads.shared
 
     private var title: String { stripVodCode(movie.name) }
+
+    // The effective source to save offline (a chosen alternate version, else the movie itself).
+    private var dlId: String { String(chosen?.streamId ?? movie.streamId) }
+    private var dlContainer: String { (chosen?.container ?? movie.container).ifBlank("mp4") }
+    /// The remote file URL a download pulls from (direct file, never the HLS remux).
+    private var sourceUrl: String {
+        if let s = chosen { return catalog.client.playbackUrl(source: s) }
+        return catalog.client.playbackUrl(movie: movie)
+    }
 
     private var backdropUrl: URL? {
         let b = (info?.backdrop ?? "").ifBlank(movie.poster)
@@ -137,14 +158,14 @@ struct MovieDetailView: View {
         return parts.joined(separator: "  •  ")
     }
 
+    // Play from the local file when it's been downloaded, else stream from the gateway.
     private var playUrl: String {
-        if let s = chosen { return catalog.client.playbackUrl(source: s) }
-        return catalog.client.playbackUrl(movie: movie)
+        downloads.localURL(dlId)?.absoluteString ?? sourceUrl
     }
 
     private var resumeItem: WatchItem {
-        WatchItem(kind: "movie", id: String(chosen?.streamId ?? movie.streamId), title: title,
-                  poster: movie.poster, container: chosen?.container ?? movie.container,
+        WatchItem(kind: "movie", id: dlId, title: title,
+                  poster: movie.poster, container: dlContainer,
                   url: playUrl, positionMs: 0, durationMs: 0, updatedAt: 0)
     }
 
@@ -184,16 +205,26 @@ struct MovieDetailView: View {
                             }
                         }
                     }
-                    NavigationLink {
-                        PlayerView(title: title, url: playUrl, resume: resumeItem)
-                    } label: {
-                        Label("Play", systemImage: "play.fill")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
+                    HStack(spacing: 10) {
+                        NavigationLink {
+                            PlayerView(title: title, url: playUrl, resume: resumeItem)
+                        } label: {
+                            Label("Play", systemImage: "play.fill")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        if Downloads.canDownload(container: dlContainer) {
+                            DownloadControl(id: dlId, title: title, poster: movie.poster,
+                                            container: dlContainer, url: sourceUrl)
+                        }
                     }
-                    .buttonStyle(.borderedProminent)
                     .padding(.top, 8)
+                    if let d = downloads.items[dlId], d.status == .failed, !d.message.isEmpty {
+                        Text(d.message).font(.footnote).foregroundStyle(.orange)
+                    }
                 }
                 .padding(.horizontal, 16)
             }
