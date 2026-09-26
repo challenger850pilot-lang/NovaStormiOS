@@ -18,7 +18,12 @@ jobs:
 
       - name: Toolchain
         run: |
+          # App Store now requires the iOS 26 SDK (Xcode 26+); pick the newest Xcode on the runner.
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)"
+          [ -z "$XC" ] && XC="$(ls -d /Applications/Xcode_*.app 2>/dev/null | sort -V | tail -1)"
+          [ -n "$XC" ] && sudo xcode-select -s "$XC/Contents/Developer"
           xcodebuild -version
+          xcodebuild -showsdks | grep -i iphoneos || true
           brew install xcodegen
 
       - name: Generate Xcode project
